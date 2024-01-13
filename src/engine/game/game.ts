@@ -1,4 +1,5 @@
 import {Logger} from '../logs/logger.ts';
+import {Engine} from './engine.ts';
 
 export abstract class Game {
     abstract name: string;
@@ -6,7 +7,10 @@ export abstract class Game {
     abstract version: string;
     abstract logger: Logger;
 
-    onLoad(): void {
+    protected engine!: Engine;
+
+    onLoad(engine: Engine): void {
+        this.engine = engine;
     }
 
     onStart(): void {

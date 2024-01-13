@@ -2,23 +2,25 @@ import {GlobalData} from '../data/global-data.ts';
 import {GameProperties} from './game.properties.ts';
 import {GameScreen} from '../screen/game-screen.ts';
 import {Game} from './game.ts';
-import {Logger} from '../logs/logger.ts';
+import {GameObject} from '../structure/game-object.ts';
+import {Time} from '../data/time.ts';
+import {Scene} from '../structure/scene.ts';
 
 export class Engine {
-    private readonly screen: GameScreen;
+    readonly screen: GameScreen;
+    readonly time = new Time();
+
     private readonly globalData = new GlobalData();
+    private readonly gameObjects = new Array<GameObject>();
+    private readonly scenes = new Array<Scene>();
 
+    private currentScene?: Scene;
     private game?: Game;
-
     private isPlaying = false;
     private _started = false;
 
-    private logger = new Logger('koi.wpengine.core');
-
     constructor(canvasId: string, private readonly properties: GameProperties) {
         this.screen = new GameScreen(canvasId);
-
-        this.logger.debug('Web Player Engine initialized');
     }
 
     get started(): boolean {
@@ -28,7 +30,7 @@ export class Engine {
     load(game: Game): void {
         this.game = game;
 
-        this.game.onLoad();
+        this.game.onLoad(this);
     }
 
     start(): void {
@@ -53,12 +55,48 @@ export class Engine {
         this.isPlaying = false;
     }
 
+    instanciateGameObject(gameObject: any): GameObject {
+        const instance = new gameObject(this, this.globalData.nextGameObjectId++);
+
+        this.gameObjects.push(instance);
+
+        return instance;
+    }
+
+    loadScene<T extends Scene>(scene: any): T {
+        const instance = new scene(this, this.globalData.nextGameObjectId++) as T;
+
+        this.scenes.push(instance);
+
+        instance.load();
+
+        return instance;
+    }
+
+    showScene(scene: Scene): void {
+        if (this.currentScene === scene || scene.destroyed || !this.findSceneById(scene.id)) {
+            return;
+        }
+
+        this.currentScene?.hide();
+
+        this.currentScene = scene;
+
+        this.currentScene.show();
+    }
+
+    private findSceneById(id: number): Scene | null {
+        return this.scenes.find(scene => scene.id === id) ?? null;
+    }
+
     private update(): void {
-        this.logger.debug('Update');
+        this.currentScene?.update();
     }
 
     private draw(): void {
-        this.logger.debug('Draw');
+        this.screen.clear();
+
+        this.currentScene?.draw();
     }
 
     private playPlayingFrame(): void {
@@ -84,7 +122,7 @@ export class Engine {
 
     private loop(timestamp: number) {
         this.globalData.timestamp = timestamp;
-        this.globalData.deltaTime = timestamp - this.globalData.lastRender;
+        this.time.deltaTime = timestamp - this.globalData.lastRender;
 
         if (!this._started) {
             this.playStartFrame();
@@ -94,4 +132,7 @@ export class Engine {
             this.playPlayingFrame();
         }
     }
+
+    // TODO: Remove destroyed game objects (remove its from parent scenes)
+    // TODO: Remove destroyed scenes
 }

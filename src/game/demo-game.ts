@@ -1,5 +1,8 @@
 import {Game} from '../engine/game/game.ts';
 import {Logger} from '../engine/logs/logger.ts';
+import {MainScene} from './scenes/main-scene.ts';
+import {CubePrefab} from './prefabs/cube-prefab.ts';
+import {Scene} from '../engine/structure/scene.ts';
 
 export class DemoGame extends Game {
     guid = 'koi.wpengine.demo-game';
@@ -7,12 +10,14 @@ export class DemoGame extends Game {
     version = '0.0.1';
     logger = new Logger(`${this.guid}`);
 
-    onLoad() {
-        this.logger.debug(`${this.name} v${this.version} loaded`);
-    }
-
     onStart() {
-        this.logger.debug(`${this.name} v${this.version} started`);
+        const mainScene = this.engine.loadScene(Scene) as MainScene;
+
+        mainScene.logger = this.logger;
+
+        mainScene.addGameObject(this.engine.instanciateGameObject(CubePrefab));
+
+        this.engine.showScene(mainScene);
     }
 
 }
